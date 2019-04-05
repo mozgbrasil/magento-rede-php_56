@@ -1,0 +1,261 @@
+<?php
+/**
+ * Copyright © 2016 Mozg. All rights reserved.
+ * See LICENSE.txt for license details.
+ */
+?>
+
+<?php
+
+/*
+dump(get_class($this));
+dump($this->getData());
+dump($this->getMethod());
+dump($this->getMethod()->getData());
+dump($this->getInfo());
+dump($this->getInfo()->getData());
+dump(get_class_methods(get_class($this)));
+//dump(get_class_methods(get_class($this->getInfo())));
+*/
+
+?>
+
+<?php
+$info = $this->getInfo();
+?>
+
+<?php echo $this->htmlEscape($this->getMethod()->getTitle()) ?><br/>
+
+<?php if ($info): ?>
+
+    <?php if ($info->getMozgPspReference() == ''): ?>
+        <?php echo Mage::helper('mozg_rede')->__('Payment has not been processed yet.') ?> <br/>
+    <?php else :?>
+
+        <?php
+
+        //
+
+        $order = $this->getMethod()->getInfoInstance()->getOrder();
+
+        $realOrderId = $order->getRealOrderId();
+        $incrementId = $order->getIncrementId();
+
+        $storeId = $this->getMethod()->getInfoInstance()->getOrder()->getStoreId();
+
+        //
+
+        $pspReference = $this->htmlEscape($info->getMozgPspReference());
+
+        //
+
+        if (Mage::app()->getStore()->isAdmin()){
+
+            $url = Mage::helper('adminhtml')->getUrl('adminhtml/Rede/consulta/', array('pspReference' => $pspReference,'incrementId' => $incrementId) );
+            $link = "javascript:openPopupsMozg('$url', 'WinXilinus', 'Link', 'Rede', 'rede');";
+
+            echo Mage::helper('mozg_rede')->__('Rede PSP Reference: <a href="%s">%s</a>', $link, $pspReference) . ' <br/>';
+
+        }
+
+        //
+
+        require_once(Mage::getBaseDir('lib') . '/erede/Classloader.php');
+
+        $accountData = Mage::helper('mozg_rede')->getAccountData($storeId);
+        $environment = $accountData['environment'];
+        $pv = $accountData['pv'];
+        $token = $accountData['token'];
+        //dump($accountData);
+
+        $query = new Query($pv,$token, $environment);
+
+        // Transaction
+        $tid = $pspReference;
+        $responseData = $query->getTransactionByTid($tid);
+        $responseData = $responseData->toArray();
+
+        /*dump($tid);
+        dump($responseData);
+        dump(get_class_methods(get_class($query)));
+        dump(get_class_methods(get_class($responseData)));
+        exit;*/
+
+        $tid = $responseData['authorization']['tid'];
+        $nsu = $responseData['authorization']['nsu'];
+
+        if(array_key_exists('capture', $responseData)){
+            $nsu = $responseData['capture']['nsu'];
+        }
+
+        $payment_status = $responseData['authorization']['status'];
+        $color = ($payment_status == 'Approved') ? 'green' : 'red';
+
+        $message_status = Mage::helper('mozg_rede')->__($payment_status);
+
+        $authResult = '<font color="'.$color.'"><b>' . $message_status . '</b></font>';
+
+        echo Mage::helper('mozg_rede')->__('Transaction Status: %s', $authResult) . ' <br/>';
+
+        //
+
+        ?>
+
+    <?php endif;?>
+
+
+
+    <?php if ($this->getInfo()->getMethod() == 'mozg_rede_erede_cc'): ?>
+        <?php echo Mage::helper('mozg_rede')->__('Name on the Card: %s', $this->htmlEscape($this->getInfo()->getCcOwner())) ?><br/>
+        <?php if( $this->htmlEscape($this->getInfo()->getAdditionalInformation('social_security_number')) != "" ): ?>
+            <?php echo Mage::helper('mozg_rede')->__('Social Security Number: %s', $this->htmlEscape($this->getInfo()->getAdditionalInformation('social_security_number'))) ?><br/>
+        <?php endif; ?>
+        <?php echo Mage::helper('mozg_rede')->__('Credit Card Type: %s', $this->htmlEscape($this->getCcTypeName())) ?><br/>
+        <?php echo Mage::helper('mozg_rede')->__('Credit Card Number: xxxx-%s', $this->htmlEscape($this->getInfo()->getCcLast4())) ?><br/>
+        <?php echo Mage::helper('mozg_rede')->__('Expiration Date: %s/%s', $this->htmlEscape($this->getCcExpMonth()), $this->htmlEscape($this->getInfo()->getCcExpYear())) ?><br/>
+        <?php if($this->htmlEscape($this->getInfo()->getAdditionalInformation('number_of_installments')) != "" && $this->htmlEscape($this->getInfo()->getAdditionalInformation('number_of_installments')) > 1): ?>
+            <?php echo Mage::helper('mozg_rede')->__('Number of installments: %s', $this->htmlEscape($this->getInfo()->getAdditionalInformation('number_of_installments'))) ?><br/>
+        <?php endif; ?>
+        <?php
+
+        $var = $this->htmlEscape($this->getInfo()->getMozgAcquirerReference());
+
+        if( isset($responseData) && ($info->getMozgPspReference() != '') && empty($var) && array_key_exists('authorization', $responseData) ):
+
+        ?>
+            <?php
+
+            echo Mage::helper('mozg_rede')->__('TID: %s', $this->htmlEscape($tid)) . '<br/>';
+            echo Mage::helper('mozg_rede')->__('NSU: %s', $this->htmlEscape($nsu)) . '<br/>';
+            echo Mage::helper('mozg_rede')->__('Código de Autorização: %s', $this->htmlEscape($responseData['authorization']['authorizationCode'])) . '<br/>';
+
+             ?>
+        <?php endif; ?>
+    <?php endif; ?>
+
+
+
+
+    <?php if ($this->getInfo()->getMethod() == 'mozg_rede_erede_dc'): ?>
+        <?php echo Mage::helper('mozg_rede')->__('Name on the Card: %s', $this->htmlEscape($this->getInfo()->getCcOwner())) ?><br/>
+        <?php echo Mage::helper('mozg_rede')->__('Credit Card Type: %s', $this->htmlEscape($this->getCcTypeName())) ?><br/>
+        <?php echo Mage::helper('mozg_rede')->__('Credit Card Number: xxxx-%s', $this->htmlEscape($this->getInfo()->getCcLast4())) ?><br/>
+        <?php echo Mage::helper('mozg_rede')->__('Expiration Date: %s/%s', $this->htmlEscape($this->getCcExpMonth()), $this->htmlEscape($this->getInfo()->getCcExpYear())) ?><br/>
+
+        <?php
+
+        $var = $this->htmlEscape($this->getInfo()->getMozgAcquirerReference());
+
+        if( ($info->getMozgPspReference() != '') && empty($var) ):
+
+        ?>
+            <?php //echo Mage::helper('mozg_rede')->__('Tid:: %s', $this->htmlEscape($responseData['Payment']['AcquirerTransactionId'])) ?><br/>
+        <?php endif; ?>
+    <?php endif; ?>
+
+
+    <?php
+
+    // New Way
+    if($this->getInfo()->getAdditionalInformation('social_security_number')) {
+        $additionalInformation = [
+            'social_security_number' => $this->getInfo()->getAdditionalInformation('social_security_number'),
+            'firstname' => $this->getInfo()->getAdditionalInformation('firstname'),
+            'lastname' => $this->getInfo()->getAdditionalInformation('lastname'),
+            'dob' => $this->getInfo()->getAdditionalInformation('dob'),
+        ];
+    } else {
+        // older versions saved it into the PoNumber to be backwards compatible leave this in
+        $additionalInformation = unserialize($this->getInfo()->getPoNumber());
+    }
+
+    $documento = $additionalInformation['social_security_number'];
+
+    $tipo_documento = 'CPF';
+    $mozg_util = new \Mozg\Framework\Util();
+    if($mozg_util->validaCNPJ($documento)) {
+        $tipo_documento = 'CNPJ';
+    }
+
+    ?>
+
+
+    <?php if ($this->getInfo()->getMethod() == 'mozg_rede_erede_boleto'): ?>
+        <?php echo Mage::helper('mozg_rede')->__('Social Security Number: %s', $this->htmlEscape($additionalInformation['social_security_number'])) ?><br/>
+        <?php echo Mage::helper('mozg_rede')->__($tipo_documento.'_Firstname: %s', $this->htmlEscape($additionalInformation['firstname'])) ?><br/>
+        <?php echo Mage::helper('mozg_rede')->__($tipo_documento.'_Lastname: %s', $this->htmlEscape($additionalInformation['lastname'])) ?><br/>
+
+        <?php if($this->getInfo()->getOrder() != null): ?>
+        <?php echo Mage::helper('mozg_rede')->__('Boleto PDF: <a target="_blank" href="%s">Download</a>', $this->getInfo()->getOrder()->getMozgPaymentUrl()) ?><br/>
+        <?php endif;?>
+
+        <?php if( isset($responseData) ): ?>
+        <?php echo Mage::helper('mozg_rede')->__('Instructions: %s', $this->__($responseData['Payment']['Instructions'])) ?><br/>
+        <?php endif;?>
+    <?php endif; ?>
+
+
+
+
+    <?php if ($this->getInfo()->getMethod() == 'mozg_rede_erede_eletronictransfer'): ?>
+        <?php echo Mage::helper('mozg_rede')->__('Social Security Number: %s', $this->htmlEscape($additionalInformation['social_security_number'])) ?><br/>
+        <?php echo Mage::helper('mozg_rede')->__($tipo_documento.'_Firstname: %s', $this->htmlEscape($additionalInformation['firstname'])) ?><br/>
+        <?php echo Mage::helper('mozg_rede')->__($tipo_documento.'_Lastname: %s', $this->htmlEscape($additionalInformation['lastname'])) ?><br/>
+
+        <?php if($this->getInfo()->getOrder() != null): ?>
+        <?php echo Mage::helper('mozg_rede')->__('EletronicTransfer PDF: <a target="_blank" href="%s">Download</a>', $this->getInfo()->getOrder()->getMozgPaymentUrl()) ?><br/>
+        <?php endif;?>
+    <?php endif; ?>
+
+
+    <?php if (Mage::app()->getStore()->isAdmin()): ?>
+        <?php if($this->htmlEscape($this->getInfo()->getMozgAvsResult()) != ""): ?>
+            <?php echo Mage::helper('mozg_rede')->__('Avs result: %s', $this->htmlEscape($this->getInfo()->getMozgAvsResult())) ?><br/>
+        <?php endif; ?>
+        <?php if($this->htmlEscape($this->getInfo()->getMozgCvcResult()) != ""): ?>
+            <?php echo Mage::helper('mozg_rede')->__('Cvc result: %s', $this->htmlEscape($this->getInfo()->getMozgCvcResult())) ?><br/>
+        <?php endif; ?>
+        <?php if($this->htmlEscape($this->getInfo()->getMozgTotalFraudScore()) != ""): ?>
+            <?php echo Mage::helper('mozg_rede')->__('Total fraud score: %s', $this->htmlEscape($this->getInfo()->getMozgTotalFraudScore())) ?><br/>
+        <?php endif; ?>
+        <?php if($this->htmlEscape($this->getInfo()->getMozgRefusalReasonRaw()) != ""): ?>
+            <?php echo Mage::helper('mozg_rede')->__('Raw acquirer response: %s', $this->htmlEscape($this->getInfo()->getMozgRefusalReasonRaw())) ?><br/>
+        <?php endif; ?>
+        <?php if($this->htmlEscape($this->getInfo()->getMozgAuthCode()) != ""): ?>
+            <?php echo Mage::helper('mozg_rede')->__('Authorisation code: %s', $this->htmlEscape($this->getInfo()->getMozgAuthCode())) ?><br/>
+        <?php endif; ?>
+        <?php if($this->htmlEscape($this->getInfo()->getMozgAcquirerReference()) != ""): ?>
+            <?php echo Mage::helper('mozg_rede')->__('Acquirer reference: %s', $this->htmlEscape($this->getInfo()->getMozgAcquirerReference())) ?><br/>
+        <?php endif; ?>
+    <?php endif; ?>
+
+    <!-- Anti-Fraud -->
+
+    <?php if ($info->getMozgPspReference() == ''): ?>
+
+    <?php else :?>
+
+        <?php
+
+        $order = $info->getOrder();
+        $amount = $order->getGrandTotal();
+        $payment = $order->getPayment();
+        $getAdditionalInformation = $payment->getAdditionalInformation();
+
+        if (array_key_exists('mozg_rede_erede_request_data', $getAdditionalInformation) ){
+
+            $request_data = $getAdditionalInformation['mozg_rede_erede_request_data'];
+            $response_data = $getAdditionalInformation['mozg_rede_erede_response_data'];
+
+            //dump($getAdditionalInformation);
+            //dump($response_data);
+
+        }
+
+        ?>
+
+    <?php endif;?>
+
+    <!-- Anti-Fraud -->
+
+<?php endif;?>

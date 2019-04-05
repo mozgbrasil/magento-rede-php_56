@@ -1,0 +1,13 @@
+## Modman Module Mozg
+app/code/local/Mozg/Rede/	app/code/local/Mozg/Rede/
+app/design/adminhtml/default/default/layout/mozg_rede.xml	app/design/adminhtml/default/default/layout/mozg_rede.xml
+app/design/adminhtml/default/default/template/mozg_rede/	app/design/adminhtml/default/default/template/mozg_rede/
+app/design/frontend/base/default/layout/mozg_rede.xml	app/design/frontend/base/default/layout/mozg_rede.xml
+app/design/frontend/base/default/template/mozg_rede/	app/design/frontend/base/default/template/mozg_rede/
+app/etc/modules/Mozg_Rede.xml	app/etc/modules/Mozg_Rede.xml
+app/locale/pt_BR/Mozg_Rede.csv	app/locale/pt_BR/Mozg_Rede.csv
+js/mozg_rede/	js/mozg_rede/
+lib/erede	lib/erede
+skin/adminhtml/default/default/images/mozg_rede/	skin/adminhtml/default/default/images/mozg_rede/
+skin/frontend/base/default/css/mozg_rede/	skin/frontend/base/default/css/mozg_rede/
+skin/frontend/base/default/images/mozg_rede/	skin/frontend/base/default/images/mozg_rede/
